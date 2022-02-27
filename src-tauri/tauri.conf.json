@@ -22,7 +22,10 @@
       ]
     },
     "allowlist": {
-      "all": true
+      "all": true,
+      "clipboard": {
+        "all": true
+      }
     },
     "windows": [
       {

@@ -1,50 +1,37 @@
 import React, { useState } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
+import { clipboard } from '@tauri-apps/api';
+import WebSocket from 'isomorphic-ws';
 
+import './index.css';
 import './App.css';
 
-function App() {
-	const [msgFromRust, setMsgFromRust] = useState('');
-	const [inputValue, setInputValue] = useState('');
+const serverUrl: string = 'ws://127.0.0.1:9001';
+const ws: WebSocket = new WebSocket(serverUrl);
 
-	const handleHelloWorld = async () => {
-		try {
-			const response = await invoke('hello_world_test', {
-				event: inputValue || 'nope',
-			});
-			setMsgFromRust(`${response}`);
-			console.log('response ', response);
-		} catch (error) {
-			console.log('error ', error);
-		}
+function App() {
+	ws.onopen = async function open() {
+		console.log(`Connected WebSocket to server ${serverUrl}`);
 	};
 
-	const components = ['div', 'div', 'div'];
+	ws.onmessage = function incoming(data) {
+		console.log(`Received data: ${data.data}`);
+	};
+
+	const components = ['button', 'button', 'button'];
 	return (
 		<div>
-			{components.map((comp, i) => React.createElement(comp, { key: i }))}
+			<button className='centered' onClick={sendClipboardDataToServer}>
+				Send clipboard text to server
+			</button>
 		</div>
 	);
+}
 
-	return (
-		<div className='App'>
-			<header className='App-header'>
-				<div className='component-wrapper'>
-					<input
-						value={inputValue}
-						placeholder='input for rust'
-						onChange={(e) => setInputValue(e.target.value)}
-					/>
-					<button onClick={handleHelloWorld}>call rust</button>
-					{!!msgFromRust && (
-						<p style={{ position: 'absolute' }}>
-							response message: {msgFromRust}
-						</p>
-					)}
-				</div>
-			</header>
-		</div>
-	);
+function sendClipboardDataToServer() {
+	clipboard.readText().then((value) => {
+		ws.send(value);
+		console.log(`Sent data: ${value}`);
+	});
 }
 
 export default App;

@@ -1,9 +1,9 @@
 [package]
-name = "tauri-react-example"
-version = "0.1.2"
-description = "A Tauri App"
-authors = [ "you" ]
-license = "Apache-2.0 OR MIT"
+name = "clipboard-sync"
+version = "0.1.0"
+description = "Easily sync your clipboard between devices. This is a work in progress app."
+authors = [ "Steveplays28" ]
+license = "GPLv3"
 edition = "2021"
 
 [build-dependencies]
@@ -13,6 +13,9 @@ tauri-build = { version = "1.0.0-rc.3", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = [ "derive" ] }
 tauri = { version = "1.0.0-rc.3", features = ["api-all"] }
+tungstenite = "0.17.2"
+log = "0.4.14"
+console_log = { version = "0.2", features = ["color"] }
 
 [features]
 default = [ "custom-protocol" ]
