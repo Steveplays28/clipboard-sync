@@ -51,7 +51,7 @@ Install [Microsoft Edge Devtools](https://www.microsoft.com/en-au/p/microsoft-ed
 
 ## Issues and suggestions
 
-If you've found a problem or want to make a suggestions, feel free to [open an issue](https://github.com/Steveplays28/random-stuff/issues/new)!
+If you've found a problem or want to make a suggestions, feel free to [open an issue](https://github.com/Steveplays28/clipboard-sync/issues/new)!
 
 Please check if there isn't already an issue open for what you want to report.
 
@@ -60,9 +60,9 @@ I will respond as soon as I can.
 
 ## Contributing
 
-If you want to add or change something, feel free to [make a pull request](https://github.com/Steveplays28/random-stuff/compare)!
+If you want to add or change something, feel free to [make a pull request](https://github.com/Steveplays28/clipboard-sync/compare)!
 
-Please check if there isn't already a pull request open for this specific issue, and adhere to the rules listed in each of the folders' READMEs. 
+Please check if there isn't already a pull request open for this specific issue.
 
 I will respond as soon as I can.
 
