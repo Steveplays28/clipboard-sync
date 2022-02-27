@@ -17,7 +17,6 @@ function App() {
 		console.log(`Received data: ${data.data}`);
 	};
 
-	const components = ['button', 'button', 'button'];
 	return (
 		<div>
 			<button className='centered' onClick={sendClipboardDataToServer}>

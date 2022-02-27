@@ -9,8 +9,6 @@
 
 mod cmd;
 
-use log::info;
-use log::Level;
 use serde::{Deserialize, Serialize};
 use std::net::TcpListener;
 use std::thread::spawn;
@@ -44,8 +42,6 @@ async fn menu_toggle(window: tauri::Window) {
 
 fn main() {
 	spawn(|| {
-		// console_log::init_with_level(Level::Debug);
-
 		let server = TcpListener::bind("127.0.0.1:9001").unwrap();
 		for stream in server.incoming() {
 			spawn(move || {
