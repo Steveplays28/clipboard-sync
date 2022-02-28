@@ -442,12 +442,11 @@ dependencies = [
 name = "clipboard-sync"
 version = "0.1.0"
 dependencies = [
- "console_log",
- "log",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
+ "tauri-plugin-store",
  "tungstenite",
 ]
 
@@ -489,17 +488,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30ed07550be01594c6026cff2a1d7fe9c8f683caa798e12b68694ac9e88286a3"
 dependencies = [
  "cache-padded",
-]
-
-[[package]]
-name = "console_log"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "501a375961cef1a0d44767200e66e4a559283097e91d0730b1d75dfb2f8a1494"
-dependencies = [
- "log",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -1662,6 +1650,29 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+
+[[package]]
+name = "libappindicator"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97b29fab3280d59f3d06725f75da9ef9a1b001b2c748b1abfebd1c966c61d7de"
+dependencies = [
+ "glib",
+ "gtk",
+ "gtk-sys",
+ "libappindicator-sys",
+ "log",
+]
+
+[[package]]
+name = "libappindicator-sys"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90bdcb8c5cfc11febe2ff3f18386d6cb7d29f464cbaf6b286985c3f1a501d74f"
+dependencies = [
+ "gtk-sys",
+ "pkg-config",
+]
 
 [[package]]
 name = "libc"
@@ -3182,6 +3193,7 @@ dependencies = [
  "gtk",
  "instant",
  "lazy_static",
+ "libappindicator",
  "libc",
  "log",
  "ndk",
@@ -3319,6 +3331,18 @@ dependencies = [
  "syn",
  "tauri-codegen",
  "tauri-utils",
+]
+
+[[package]]
+name = "tauri-plugin-store"
+version = "0.0.0"
+source = "git+https://github.com/tauri-apps/tauri-plugin-store#953d4f4aedef90ea42d460d03da215d1e2a9cec9"
+dependencies = [
+ "bincode",
+ "serde",
+ "serde_json",
+ "tauri",
+ "thiserror",
 ]
 
 [[package]]

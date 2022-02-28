@@ -13,9 +13,10 @@ use serde::{Deserialize, Serialize};
 use std::net::TcpListener;
 use std::thread::spawn;
 use tauri::{
-	api::dialog::ask, http::ResponseBuilder, CustomMenuItem, GlobalShortcutManager, Manager, Menu,
-	MenuItem, RunEvent, Submenu,
+	api::dialog::ask, http::ResponseBuilder, CustomMenuItem, Manager, Menu, MenuItem, RunEvent,
+	Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem, WindowBuilder,
 };
+use tauri_plugin_store;
 use tungstenite::accept;
 
 #[derive(Serialize)]
@@ -58,8 +59,21 @@ fn main() {
 		}
 	});
 
+	// System tray with menu buttons
+	let device_button = CustomMenuItem::new(
+		"Copy clipboard data from device 1".to_string(),
+		"Copy clipboard data from device 1",
+	);
+	let quit = CustomMenuItem::new("quit".to_string(), "Quit");
+	let system_tray_menu = SystemTrayMenu::new()
+		.add_item(device_button)
+		.add_native_item(SystemTrayMenuItem::Separator)
+		.add_item(quit);
+	let system_tray = SystemTray::new().with_menu(system_tray_menu);
+
 	#[allow(unused_mut)]
 	let mut app = tauri::Builder::default()
+		.plugin(tauri_plugin_store::PluginBuilder::default().build())
 		.on_page_load(|window, _| {
 			let window_ = window.clone();
 			window.listen("js-event", move |event| {
@@ -72,6 +86,34 @@ fn main() {
 					.emit("rust-event", Some(&reply))
 					.expect("failed to emit");
 			});
+		})
+		.system_tray(system_tray)
+		.on_system_tray_event(|app, event| match event {
+			SystemTrayEvent::MenuItemClick { id, .. } => {
+				let item_handle = app.tray_handle().get_item(&id);
+
+				match id.as_str() {
+					"quit" => {
+						std::process::exit(0);
+					}
+					_ => {}
+				}
+			}
+			SystemTrayEvent::LeftClick { position, .. } => {
+				app.create_window(
+					"main",
+					tauri::WindowUrl::default(),
+					|win, webview| {
+						let win = win
+							.title("Clipboard Sync")
+							.resizable(true)
+							.inner_size(800.0, 550.0)
+							.min_inner_size(400.0, 200.0);
+						return (win, webview);
+					},
+				);
+			}
+			_ => {}
 		})
 		.register_uri_scheme_protocol("customprotocol", move |_app_handle, request| {
 			if request.method() == "POST" {
@@ -108,17 +150,7 @@ fn main() {
 
 	app.run(|app_handle, e| match e {
 		// Application is ready (triggered only once)
-		RunEvent::Ready => {
-			let app_handle = app_handle.clone();
-			app_handle
-				.global_shortcut_manager()
-				.register("CmdOrCtrl+1", move || {
-					let app_handle = app_handle.clone();
-					let window = app_handle.get_window("main").unwrap();
-					window.set_title("New title!").unwrap();
-				})
-				.unwrap();
-		}
+		RunEvent::Ready => {}
 
 		// Triggered when a window is trying to close
 		RunEvent::CloseRequested { label, api, .. } => {

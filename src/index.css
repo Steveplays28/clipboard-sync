@@ -8,29 +8,6 @@ body {
 	background-color: #17382d;
 }
 
-input {
-	background-color: transparent;
-	color: #eff9f7;
-	border: 3px solid #eff9f7;
-	margin: 0 0 16px;
-	padding: 6px 12px;
-	font-size: 0.84rem;
-	text-align: center;
-}
-
-.component-wrapper {
-	position: relative;
-	width: auto;
-	margin: 0 auto;
-	display: flex;
-	flex-direction: column;
-}
-.component-wrapper p {
-	position: absolute;
-	top: 100%;
-	width: 100%;
-}
-
 .centered {
 	margin-left: auto;
 	margin-right: auto;
