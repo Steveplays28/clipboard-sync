@@ -10,14 +10,14 @@
 mod cmd;
 
 use serde::{Deserialize, Serialize};
-use std::net::TcpListener;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
 use std::thread::spawn;
 use tauri::{
 	api::dialog::ask, http::ResponseBuilder, CustomMenuItem, Manager, Menu, MenuItem, RunEvent,
 	Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem, WindowBuilder,
 };
 use tauri_plugin_store;
-use tungstenite::accept;
+use tungstenite::{accept, Message};
 
 #[derive(Serialize)]
 struct Reply {
@@ -43,27 +43,45 @@ async fn menu_toggle(window: tauri::Window) {
 
 fn main() {
 	spawn(|| {
-		let server = TcpListener::bind("127.0.0.1:9001").unwrap();
+		let default_socket_addr: SocketAddr =
+			SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9001);
+
+		let server = TcpListener::bind(default_socket_addr).unwrap();
+
 		for stream in server.incoming() {
 			spawn(move || {
+				let peer_addr = &stream
+					.as_ref()
+					.unwrap()
+					.peer_addr()
+					.unwrap_or(default_socket_addr);
 				let mut websocket = accept(stream.unwrap()).unwrap();
+
 				loop {
 					let msg = websocket.read_message().unwrap();
 
-					// We do not want to send back ping/pong messages.
-					if msg.is_binary() || msg.is_text() {
-						websocket.write_message(msg).unwrap();
+					// TODO: Store linked devices using IPs
+					// [ ] Get IP address of device using `stream.unwrap().peer_addr();`
+					// [ ] Store IP address of device using Tauri
+
+					// Send back IP address of client
+					if msg.to_text().unwrap_or("unwrap_error") == "send_self_ip" {
+						websocket.write_message(Message::text(peer_addr.to_string()));
 					}
+
+					// We do not want to send back ping/pong messages.
+					// if msg.is_binary() || msg.is_text() {
+					// 	// Send same message back to client
+					// 	websocket.write_message(msg).unwrap();
+					// }
 				}
 			});
 		}
 	});
 
 	// System tray with menu buttons
-	let device_button = CustomMenuItem::new(
-		"Copy clipboard data from device 1".to_string(),
-		"Copy clipboard data from device 1",
-	);
+	let device_button =
+		CustomMenuItem::new("device_1".to_string(), "Copy clipboard data from device 1");
 	let quit = CustomMenuItem::new("quit".to_string(), "Quit");
 	let system_tray_menu = SystemTrayMenu::new()
 		.add_item(device_button)
@@ -90,7 +108,7 @@ fn main() {
 		.system_tray(system_tray)
 		.on_system_tray_event(|app, event| match event {
 			SystemTrayEvent::MenuItemClick { id, .. } => {
-				let item_handle = app.tray_handle().get_item(&id);
+				let _item_handle = app.tray_handle().get_item(&id);
 
 				match id.as_str() {
 					"quit" => {
@@ -99,19 +117,15 @@ fn main() {
 					_ => {}
 				}
 			}
-			SystemTrayEvent::LeftClick { position, .. } => {
-				app.create_window(
-					"main",
-					tauri::WindowUrl::default(),
-					|win, webview| {
-						let win = win
-							.title("Clipboard Sync")
-							.resizable(true)
-							.inner_size(800.0, 550.0)
-							.min_inner_size(400.0, 200.0);
-						return (win, webview);
-					},
-				);
+			SystemTrayEvent::LeftClick { .. } => {
+				app.create_window("main", tauri::WindowUrl::default(), |win, webview| {
+					let win = win
+						.title("Clipboard Sync")
+						.resizable(true)
+						.inner_size(800.0, 550.0)
+						.min_inner_size(400.0, 200.0);
+					return (win, webview);
+				});
 			}
 			_ => {}
 		})
