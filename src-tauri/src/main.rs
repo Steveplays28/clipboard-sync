@@ -1,7 +1,3 @@
-// Copyright 2019-2021 Tauri Programme within The Commons Conservancy
-// SPDX-License-Identifier: Apache-2.0
-// SPDX-License-Identifier: MIT
-
 #![cfg_attr(
 	all(not(debug_assertions), target_os = "windows"),
 	windows_subsystem = "windows"
@@ -17,7 +13,7 @@ use tauri::{
 	Submenu, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem, WindowBuilder,
 };
 use tauri_plugin_store;
-use tungstenite::{accept, Message};
+use tungstenite::{accept, connect, Message};
 
 #[derive(Serialize)]
 struct Reply {
@@ -36,6 +32,13 @@ struct HttpReply {
 	request: HttpPost,
 }
 
+// The payload type must implement Serialize
+// For global events, it also must implement Clone
+#[derive(Clone, serde::Serialize)]
+struct Payload {
+	message: String,
+}
+
 #[tauri::command]
 async fn menu_toggle(window: tauri::Window) {
 	window.menu_handle().toggle().unwrap();
@@ -45,15 +48,16 @@ fn main() {
 	spawn(|| {
 		let default_socket_addr: SocketAddr =
 			SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9001);
+		let mut local_addr: SocketAddr = default_socket_addr;
 
 		let server = TcpListener::bind(default_socket_addr).unwrap();
 
 		for stream in server.incoming() {
 			spawn(move || {
-				let peer_addr = &stream
+				local_addr = stream
 					.as_ref()
 					.unwrap()
-					.peer_addr()
+					.local_addr()
 					.unwrap_or(default_socket_addr);
 				let mut websocket = accept(stream.unwrap()).unwrap();
 
@@ -66,7 +70,25 @@ fn main() {
 
 					// Send back IP address of client
 					if msg.to_text().unwrap_or("unwrap_error") == "send_self_ip" {
-						websocket.write_message(Message::text(peer_addr.to_string()));
+						websocket.write_message(Message::text(local_addr.to_string()));
+					}
+
+					// Send link_device request to other device
+					if msg
+						.to_text()
+						.unwrap_or("unwrap_error")
+						.starts_with("link_device")
+					{
+						let otherDevice = connect(
+							"ws://".to_owned()
+								+ msg
+									.to_text()
+									.unwrap_or("unwrap_error")
+									.split(" ")
+									.nth(0)
+									.unwrap_or(""),
+						);
+						otherDevice.unwrap().0.write_message(Message::text("helo"));
 					}
 
 					// We do not want to send back ping/pong messages.
@@ -93,17 +115,21 @@ fn main() {
 	let mut app = tauri::Builder::default()
 		.plugin(tauri_plugin_store::PluginBuilder::default().build())
 		.on_page_load(|window, _| {
-			let window_ = window.clone();
-			window.listen("js-event", move |event| {
-				println!("got js-event with message '{:?}'", event.payload());
-				let reply = Reply {
-					data: "something else".to_string(),
-				};
-
-				window_
-					.emit("rust-event", Some(&reply))
-					.expect("failed to emit");
+			window.listen("link-device", move |event| {
+				window.emit(
+					"link-device-success",
+					Payload {
+						message: stream
+							.as_ref()
+							.unwrap()
+							.local_addr()
+							.unwrap_or(default_socket_addr)
+							.into(),
+					},
+				);
 			});
+
+			Ok(());
 		})
 		.system_tray(system_tray)
 		.on_system_tray_event(|app, event| match event {
@@ -129,28 +155,6 @@ fn main() {
 			}
 			_ => {}
 		})
-		.register_uri_scheme_protocol("customprotocol", move |_app_handle, request| {
-			if request.method() == "POST" {
-				let request: HttpPost = serde_json::from_slice(request.body()).unwrap();
-				return ResponseBuilder::new()
-					.mimetype("application/json")
-					.header("Access-Control-Allow-Origin", "*")
-					.status(200)
-					.body(serde_json::to_vec(&HttpReply {
-						request,
-						msg: "Hello from rust!".to_string(),
-					})?);
-			}
-
-			ResponseBuilder::new()
-				.mimetype("text/html")
-				.status(404)
-				.body(Vec::new())
-		})
-		.menu(get_menu())
-		.on_menu_event(|event| {
-			println!("{:?}", event.menu_item_id());
-		})
 		.invoke_handler(tauri::generate_handler![
 			cmd::hello_world_test,
 			cmd::ls_test,
@@ -163,19 +167,21 @@ fn main() {
 	app.set_activation_policy(tauri::ActivationPolicy::Regular);
 
 	app.run(|app_handle, e| match e {
-		// Application is ready (triggered only once)
+		// On application ready (triggered only once)
 		RunEvent::Ready => {}
 
 		// Triggered when a window is trying to close
 		RunEvent::CloseRequested { label, api, .. } => {
 			let app_handle = app_handle.clone();
 			let window = app_handle.get_window(&label).unwrap();
-			// use the exposed close api, and prevent the event loop to close
+
+			// Prevent the window from closing
 			api.prevent_close();
-			// ask the user if he wants to quit
+
+			// Ask the user if they want to quit
 			ask(
 				Some(&window),
-				"Tauri API",
+				"Close window",
 				"Are you sure that you want to close this window?",
 				move |answer| {
 					if answer {
